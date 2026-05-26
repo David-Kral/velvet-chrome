@@ -44,7 +44,7 @@ jobs:
           const assetDir = path.join(clientDir, 'assets');
 
           if (!fs.existsSync(assetDir)) {
-            console.error('dist/client/assets not found. Build output:');
+            console.error('dist/client/assets not found. Listing dist/:');
             const walk = (d) => { try { fs.readdirSync(d).forEach(f => { const p = path.join(d,f); if(fs.statSync(p).isDirectory()) walk(p); else console.log(p); }); } catch(e){} };
             walk('dist');
             process.exit(1);
@@ -52,17 +52,24 @@ jobs:
 
           const files = fs.readdirSync(assetDir);
           const cssFiles = files.filter(f => f.endsWith('.css'));
-          const jsFiles = files
+
+          // Pick the largest JS file as entry (main bundle)
+          const jsEntry = files
             .filter(f => f.endsWith('.js'))
             .map(f => ({ name: f, size: fs.statSync(path.join(assetDir, f)).size }))
-            .sort((a, b) => b.size - a.size);
+            .sort((a, b) => b.size - a.size)[0]?.name;
 
-          const jsEntry = jsFiles[0]?.name;
           console.log('CSS:', cssFiles, 'JS entry:', jsEntry);
-
           if (!jsEntry) { console.error('No JS entry found'); process.exit(1); }
 
-          const cssLinks = cssFiles.map(f => `  <link rel="stylesheet" href="assets/${f}">`).join('\n');
+          const cssLinks = cssFiles
+            .map(f => `  <link rel="stylesheet" href="assets/${f}">`)
+            .join('\n');
+
+          // Provide minimal TSR dehydrated state so hydrateRoot() doesn't throw
+          // "Invariant failed: Expected dehydrated router state to be defined"
+          const tsrStub = JSON.stringify({ dehydratedRouter: { state: { dehydratedMatches: [] } } });
+
           const html = `<!DOCTYPE html>
           <html lang="en">
             <head>
@@ -70,14 +77,16 @@ jobs:
               <meta name="viewport" content="width=device-width, initial-scale=1">
               <title>Barber Room</title>
           ${cssLinks}
-              <script type="module" src="assets/${jsEntry}"></script>
             </head>
-            <body></body>
+            <body>
+              <script>window.__TSR_DEHYDRATED__=${tsrStub}<\/script>
+              <script type="module" src="assets/${jsEntry}"><\/script>
+            </body>
           </html>`;
 
           fs.writeFileSync(path.join(clientDir, 'index.html'), html);
           fs.writeFileSync(path.join(clientDir, '404.html'), html);
-          console.log('Generated index.html and 404.html in dist/client/');
+          console.log('Generated index.html and 404.html');
           SCRIPT
 
       - name: Setup Pages

@@ -42,4 +42,20 @@ jobs:
           elif [ -f "dist/index.html" ]; then
             echo "DEPLOY_PATH=dist" >> $GITHUB_ENV
             cp dist/index.html dist/404.html
-          e
+          else
+            echo "ERROR: index.html not found. Build output:"
+            find dist/ -type f 2>/dev/null || echo "(dist/ directory missing)"
+            exit 1
+          fi
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: './${{ env.DEPLOY_PATH }}'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

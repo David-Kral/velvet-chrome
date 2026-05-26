@@ -6,7 +6,7 @@
 
 /*
  * THE BARBER ROOM — luxury dark design system.
- * 80% deep matte black, 15% olive/burgundy, 5% cream/chrome accent.
+ * 80% deep matte black, 15% forest green/olive, 5% cream/chrome accent.
  */
 
 @import url("https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap");
@@ -69,13 +69,13 @@
   --card-foreground: oklch(0.95 0.015 80);
   --popover: oklch(0.16 0.005 60);
   --popover-foreground: oklch(0.95 0.015 80);
-  /* Secondary (15%) — olive + burgundy */
+  /* Secondary (15%) — forest green + olive */
   --olive: oklch(0.38 0.06 125);
-  --burgundy: oklch(0.36 0.11 22);
+  --burgundy: oklch(0.37 0.040 136); /* forest green #37432f */
   /* Accent (5%) — chrome + cream */
   --chrome: oklch(0.78 0.012 90);
   --cream: oklch(0.94 0.025 80);
-  --primary: oklch(0.36 0.11 22); /* burgundy */
+  --primary: oklch(0.37 0.040 136); /* forest green */
   --primary-foreground: oklch(0.96 0.02 80);
   --secondary: oklch(0.38 0.06 125); /* olive */
   --secondary-foreground: oklch(0.96 0.02 80);
@@ -88,14 +88,14 @@
   --border: oklch(0.28 0.008 80 / 60%);
   --input: oklch(0.25 0.008 80);
   --ring: oklch(0.78 0.012 90);
-  --chart-1: oklch(0.36 0.11 22);
+  --chart-1: oklch(0.37 0.040 136);
   --chart-2: oklch(0.38 0.06 125);
   --chart-3: oklch(0.78 0.012 90);
   --chart-4: oklch(0.6 0.08 60);
   --chart-5: oklch(0.5 0.05 100);
   --sidebar: oklch(0.14 0.005 60);
   --sidebar-foreground: oklch(0.95 0.015 80);
-  --sidebar-primary: oklch(0.36 0.11 22);
+  --sidebar-primary: oklch(0.37 0.040 136);
   --sidebar-primary-foreground: oklch(0.96 0.02 80);
   --sidebar-accent: oklch(0.22 0.005 60);
   --sidebar-accent-foreground: oklch(0.95 0.015 80);

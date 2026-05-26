@@ -9,11 +9,17 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TymRouteImport } from './routes/tym'
 import { Route as SluzbyRouteImport } from './routes/sluzby'
 import { Route as ONasRouteImport } from './routes/o-nas'
 import { Route as GalerieRouteImport } from './routes/galerie'
 import { Route as IndexRouteImport } from './routes/index'
 
+const TymRoute = TymRouteImport.update({
+  id: '/tym',
+  path: '/tym',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SluzbyRoute = SluzbyRouteImport.update({
   id: '/sluzby',
   path: '/sluzby',
@@ -40,12 +46,14 @@ export interface FileRoutesByFullPath {
   '/galerie': typeof GalerieRoute
   '/o-nas': typeof ONasRoute
   '/sluzby': typeof SluzbyRoute
+  '/tym': typeof TymRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/galerie': typeof GalerieRoute
   '/o-nas': typeof ONasRoute
   '/sluzby': typeof SluzbyRoute
+  '/tym': typeof TymRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -53,13 +61,14 @@ export interface FileRoutesById {
   '/galerie': typeof GalerieRoute
   '/o-nas': typeof ONasRoute
   '/sluzby': typeof SluzbyRoute
+  '/tym': typeof TymRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/galerie' | '/o-nas' | '/sluzby'
+  fullPaths: '/' | '/galerie' | '/o-nas' | '/sluzby' | '/tym'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/galerie' | '/o-nas' | '/sluzby'
-  id: '__root__' | '/' | '/galerie' | '/o-nas' | '/sluzby'
+  to: '/' | '/galerie' | '/o-nas' | '/sluzby' | '/tym'
+  id: '__root__' | '/' | '/galerie' | '/o-nas' | '/sluzby' | '/tym'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -67,10 +76,18 @@ export interface RootRouteChildren {
   GalerieRoute: typeof GalerieRoute
   ONasRoute: typeof ONasRoute
   SluzbyRoute: typeof SluzbyRoute
+  TymRoute: typeof TymRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/tym': {
+      id: '/tym'
+      path: '/tym'
+      fullPath: '/tym'
+      preLoaderRoute: typeof TymRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/sluzby': {
       id: '/sluzby'
       path: '/sluzby'
@@ -107,6 +124,7 @@ const rootRouteChildren: RootRouteChildren = {
   GalerieRoute: GalerieRoute,
   ONasRoute: ONasRoute,
   SluzbyRoute: SluzbyRoute,
+  TymRoute: TymRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

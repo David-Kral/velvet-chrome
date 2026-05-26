@@ -36,11 +36,15 @@ jobs:
 
       - name: Start Cloudflare Worker and prerender pages
         run: |
-          # Start worker locally from dist/server/ (uses its wrangler.json)
-          cd dist/server
-          npx --yes wrangler@latest dev --port 8787 --local 2>&1 | tee /tmp/wrangler.log &
+          # Remove conflicting wrangler deploy config created by the build
+          rm -rf .wrangler/
+
+          # Start worker from repo root with explicit config
+          npx --yes wrangler@latest dev \
+            --config dist/server/wrangler.json \
+            --port 8787 \
+            --local 2>&1 | tee /tmp/wrangler.log &
           WRANGLER_PID=$!
-          cd ../..
 
           # Wait up to 60s for worker to respond
           echo "Waiting for worker to start..."
@@ -50,7 +54,7 @@ jobs:
           done
 
           if ! curl -sf http://localhost:8787/velvet-chrome/ > /dev/null 2>&1; then
-            echo "ERROR: Worker did not start. Wrangler log:"
+            echo "ERROR: Worker did not start. Log:"
             cat /tmp/wrangler.log
             exit 1
           fi
@@ -73,7 +77,6 @@ jobs:
           done
 
           kill $WRANGLER_PID 2>/dev/null || true
-
           [ $FAILED -ne 0 ] && { echo "Some routes failed"; exit 1; }
 
           # Copy client-side assets (JS, CSS, images)

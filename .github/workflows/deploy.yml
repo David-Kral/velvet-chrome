@@ -34,19 +34,51 @@ jobs:
       - name: Build
         run: bun run build
 
-      - name: Find output directory and prepare for Pages
+      - name: Generate index.html for GitHub Pages
         run: |
-          if [ -f "dist/client/index.html" ]; then
-            echo "DEPLOY_PATH=dist/client" >> $GITHUB_ENV
-            cp dist/client/index.html dist/client/404.html
-          elif [ -f "dist/index.html" ]; then
-            echo "DEPLOY_PATH=dist" >> $GITHUB_ENV
-            cp dist/index.html dist/404.html
-          else
-            echo "ERROR: index.html not found. Build output:"
-            find dist/ -type f 2>/dev/null || echo "(dist/ directory missing)"
-            exit 1
-          fi
+          node << 'SCRIPT'
+          const fs = require('fs');
+          const path = require('path');
+
+          const clientDir = 'dist/client';
+          const assetDir = path.join(clientDir, 'assets');
+
+          if (!fs.existsSync(assetDir)) {
+            console.error('dist/client/assets not found. Build output:');
+            const walk = (d) => { try { fs.readdirSync(d).forEach(f => { const p = path.join(d,f); if(fs.statSync(p).isDirectory()) walk(p); else console.log(p); }); } catch(e){} };
+            walk('dist');
+            process.exit(1);
+          }
+
+          const files = fs.readdirSync(assetDir);
+          const cssFiles = files.filter(f => f.endsWith('.css'));
+          const jsFiles = files
+            .filter(f => f.endsWith('.js'))
+            .map(f => ({ name: f, size: fs.statSync(path.join(assetDir, f)).size }))
+            .sort((a, b) => b.size - a.size);
+
+          const jsEntry = jsFiles[0]?.name;
+          console.log('CSS:', cssFiles, 'JS entry:', jsEntry);
+
+          if (!jsEntry) { console.error('No JS entry found'); process.exit(1); }
+
+          const cssLinks = cssFiles.map(f => `  <link rel="stylesheet" href="assets/${f}">`).join('\n');
+          const html = `<!DOCTYPE html>
+          <html lang="en">
+            <head>
+              <meta charset="utf-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1">
+              <title>Barber Room</title>
+          ${cssLinks}
+              <script type="module" src="assets/${jsEntry}"></script>
+            </head>
+            <body></body>
+          </html>`;
+
+          fs.writeFileSync(path.join(clientDir, 'index.html'), html);
+          fs.writeFileSync(path.join(clientDir, '404.html'), html);
+          console.log('Generated index.html and 404.html in dist/client/');
+          SCRIPT
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
@@ -54,7 +86,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: './${{ env.DEPLOY_PATH }}'
+          path: './dist/client'
 
       - name: Deploy to GitHub Pages
         id: deployment

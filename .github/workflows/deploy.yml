@@ -34,60 +34,55 @@ jobs:
       - name: Build
         run: bun run build
 
-      - name: Generate index.html for GitHub Pages
+      - name: Start Cloudflare Worker and prerender pages
         run: |
-          node << 'SCRIPT'
-          const fs = require('fs');
-          const path = require('path');
+          # Start worker locally from dist/server/ (uses its wrangler.json)
+          cd dist/server
+          npx --yes wrangler@latest dev --port 8787 --local 2>&1 | tee /tmp/wrangler.log &
+          WRANGLER_PID=$!
+          cd ../..
 
-          const clientDir = 'dist/client';
-          const assetDir = path.join(clientDir, 'assets');
+          # Wait up to 60s for worker to respond
+          echo "Waiting for worker to start..."
+          for i in $(seq 1 60); do
+            curl -sf http://localhost:8787/velvet-chrome/ > /dev/null 2>&1 && echo "Worker ready after ${i}s" && break
+            sleep 1
+          done
 
-          if (!fs.existsSync(assetDir)) {
-            console.error('dist/client/assets not found. Listing dist/:');
-            const walk = (d) => { try { fs.readdirSync(d).forEach(f => { const p = path.join(d,f); if(fs.statSync(p).isDirectory()) walk(p); else console.log(p); }); } catch(e){} };
-            walk('dist');
-            process.exit(1);
-          }
+          if ! curl -sf http://localhost:8787/velvet-chrome/ > /dev/null 2>&1; then
+            echo "ERROR: Worker did not start. Wrangler log:"
+            cat /tmp/wrangler.log
+            exit 1
+          fi
 
-          const files = fs.readdirSync(assetDir);
-          const cssFiles = files.filter(f => f.endsWith('.css'));
+          # Prerender all routes
+          mkdir -p dist/gh-pages
+          FAILED=0
+          for route in "" galerie sluzby o-nas tym kontakt; do
+            if [ -z "$route" ]; then
+              url="http://localhost:8787/velvet-chrome/"
+              out="dist/gh-pages/index.html"
+            else
+              url="http://localhost:8787/velvet-chrome/$route"
+              mkdir -p "dist/gh-pages/$route"
+              out="dist/gh-pages/$route/index.html"
+            fi
+            curl -sf "$url" -o "$out" \
+              && echo "OK: $url" \
+              || { echo "FAIL: $url"; FAILED=1; }
+          done
 
-          // Pick the largest JS file as entry (main bundle)
-          const jsEntry = files
-            .filter(f => f.endsWith('.js'))
-            .map(f => ({ name: f, size: fs.statSync(path.join(assetDir, f)).size }))
-            .sort((a, b) => b.size - a.size)[0]?.name;
+          kill $WRANGLER_PID 2>/dev/null || true
 
-          console.log('CSS:', cssFiles, 'JS entry:', jsEntry);
-          if (!jsEntry) { console.error('No JS entry found'); process.exit(1); }
+          [ $FAILED -ne 0 ] && { echo "Some routes failed"; exit 1; }
 
-          const cssLinks = cssFiles
-            .map(f => `  <link rel="stylesheet" href="assets/${f}">`)
-            .join('\n');
+          # Copy client-side assets (JS, CSS, images)
+          cp -r dist/client/assets dist/gh-pages/assets
 
-          // Provide minimal TSR dehydrated state so hydrateRoot() doesn't throw
-          // "Invariant failed: Expected dehydrated router state to be defined"
-          const tsrStub = JSON.stringify({ dehydratedRouter: { state: { dehydratedMatches: [] } } });
+          # 404 fallback page for SPA navigation
+          cp dist/gh-pages/index.html dist/gh-pages/404.html
 
-          const html = `<!DOCTYPE html>
-          <html lang="en">
-            <head>
-              <meta charset="utf-8">
-              <meta name="viewport" content="width=device-width, initial-scale=1">
-              <title>Barber Room</title>
-          ${cssLinks}
-            </head>
-            <body>
-              <script>window.__TSR_DEHYDRATED__=${tsrStub}<\/script>
-              <script type="module" src="assets/${jsEntry}"><\/script>
-            </body>
-          </html>`;
-
-          fs.writeFileSync(path.join(clientDir, 'index.html'), html);
-          fs.writeFileSync(path.join(clientDir, '404.html'), html);
-          console.log('Generated index.html and 404.html');
-          SCRIPT
+          echo "DEPLOY_PATH=dist/gh-pages" >> $GITHUB_ENV
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
@@ -95,7 +90,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: './dist/client'
+          path: './${{ env.DEPLOY_PATH }}'
 
       - name: Deploy to GitHub Pages
         id: deployment
